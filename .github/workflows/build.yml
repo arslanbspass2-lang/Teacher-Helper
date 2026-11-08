@@ -14,13 +14,13 @@ jobs:
         java-version: '17'
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
+      with:
+        packages: 'platform-tools'
 
     - name: Create Android Project Structure
       run: |
         mkdir -p app/src/main/java/com/example/teacherhelper
-        mkdir -p app/src/main/res/layout
-        mkdir -p app/src/main/res/values
 
         cat << 'EOF' > settings.gradle
         dependencyResolutionManagement {
@@ -54,31 +54,17 @@ jobs:
                 versionCode 1
                 versionName "1.0"
             }
-            buildTypes {
-                release {
-                    minifyEnabled false
-                }
-            }
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_1_8
-                targetCompatibility JavaVersion.VERSION_1_8
-            }
         }
         dependencies {
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.9.0'
         }
         EOF
 
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application
-                android:allowBackup="true"
-                android:label="TeacherHelper"
-                android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
-                <activity android:name=".MainActivity"
-                    android:exported="true">
+            <application android:label="TeacherHelper">
+                <activity android:name=".MainActivity" android:exported="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
@@ -90,30 +76,19 @@ jobs:
 
         cat << 'EOF' > app/src/main/java/com/example/teacherhelper/MainActivity.java
         package com.example.teacherhelper;
-
         import android.os.Bundle;
         import android.widget.TextView;
         import androidx.appcompat.app.AppCompatActivity;
-
         public class MainActivity extends AppCompatActivity {
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
                 TextView textView = new TextView(this);
                 textView.setText("Привет! Наше приложение работает!");
-                textView.setTextSize(24);
-                textView.setPadding(50, 50, 50, 50);
                 setContentView(textView);
             }
         }
         EOF
-
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: 8.0
 
     - name: Build APK
       run: gradle assembleDebug
