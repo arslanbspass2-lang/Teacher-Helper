@@ -13,69 +13,75 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Download and Setup Gradle 8.0
-      run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
-        unzip -q gradle-8.0-bin.zip
-        echo "$PWD/gradle-8.0/bin" >> $GITHUB_PATH
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: 'platforms;android-34;build-tools;34.0.0'
 
-    - name: Create Android Project Structure
+    - name: Create project files
       run: |
-        mkdir -p app/src/main/java/com/example/teacherhelper
+        mkdir -p app/src/main/java/com/example/teacherhelper/db
         mkdir -p app/src/main/res/layout
+        mkdir -p app/src/main/res/values
 
-        cat << 'EOF' > settings.gradle
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
+        cat > settings.gradle <<'EOF'
+        pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
         dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories {
-                google()
-                mavenCentral()
-            }
+          repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+          repositories { google(); mavenCentral() }
         }
         rootProject.name = "TeacherHelper"
         include ':app'
         EOF
 
-        cat << 'EOF' > build.gradle
-        plugins {
-            id 'com.android.application' version '8.1.0' apply false
-        }
+        cat > build.gradle <<'EOF'
+        plugins { id 'com.android.application' version '8.1.4' apply false }
         EOF
 
-        cat << 'EOF' > gradle.properties
+        cat > gradle.properties <<'EOF'
         android.useAndroidX=true
         android.enableJetifier=true
         org.gradle.jvmargs=-Xmx2048m
         EOF
 
-        cat << 'EOF' > app/build.gradle
-        plugins {
-            id 'com.android.application'
-        }
+        cat > app/build.gradle <<'EOF'
+        plugins { id 'com.android.application' }
         android {
             namespace 'com.example.teacherhelper'
-            compileSdk 33
+            compileSdk 34
             defaultConfig {
                 applicationId "com.example.teacherhelper"
                 minSdk 24
-                targetSdk 33
+                targetSdk 34
                 versionCode 1
-                versionName "1.0"
+                versionName "0.1-beta"
             }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_1_8
+                targetCompatibility JavaVersion.VERSION_1_8
+            }
+        }
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'androidx.room:room-runtime:2.6.1'
+            annotationProcessor 'androidx.room:room-compiler:2.6.1'
+            implementation 'androidx.documentfile:documentfile:1.0.1'
         }
         EOF
 
-        cat << 'EOF' > app/src/main/AndroidManifest.xml
+        cat > app/src/main/res/values/themes.xml <<'EOF'
+        <resources>
+            <style name="Theme.TeacherHelper" parent="Theme.AppCompat.Light.DarkActionBar"/>
+        </resources>
+        EOF
+
+        cat > app/src/main/AndroidManifest.xml <<'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application android:label="TeacherHelper" android:theme="@android:style/Theme.DeviceDefault">
+            <application
+                android:label="TeacherHelper"
+                android:theme="@style/Theme.TeacherHelper"
+                android:allowBackup="false">
                 <activity android:name=".MainActivity" android:exported="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
@@ -86,83 +92,137 @@ jobs:
         </manifest>
         EOF
 
-        cat << 'EOF' > app/src/main/res/layout/activity_main.xml
+        cat > app/src/main/res/layout/activity_main.xml <<'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="20dp">
+            android:layout_width="match_parent" android:layout_height="match_parent" android:padding="16dp">
 
-            <!-- ЭКРАН ВХОДА -->
-            <LinearLayout
-                android:id="@+id/layoutActivation"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Введите код активации:"
-                    android:textSize="20sp"
-                    android:layout_marginBottom="20dp"/>
-
-                <EditText
-                    android:id="@+id/codeInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Например: 123"
-                    android:inputType="text"
-                    android:layout_marginBottom="20dp"/>
-
-                <Button
-                    android:id="@+id/btnLogin"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Войти" />
+            <LinearLayout android:id="@+id/layoutActivation"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:orientation="vertical" android:gravity="center">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Введите код активации:" android:textSize="20sp" android:layout_marginBottom="16dp"/>
+                <EditText android:id="@+id/codeInput" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:hint="Код из бота"
+                    android:inputType="text" android:layout_marginBottom="16dp"/>
+                <Button android:id="@+id/btnLogin" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Активировать"/>
             </LinearLayout>
 
-            <!-- ГЛАВНЫЙ ЭКРАН -->
-            <LinearLayout
-                android:id="@+id/layoutMain"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Мои протоколы:"
-                    android:textSize="22sp"
-                    android:layout_marginBottom="10dp"/>
-
-                <Button
-                    android:id="@+id/btnAddTeacher"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="+ Создать протокол учителя"
-                    android:layout_marginBottom="15dp"/>
-
-                <ScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+            <LinearLayout android:id="@+id/layoutMain" android:layout_width="match_parent"
+                android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Мои протоколы:" android:textSize="22sp" android:layout_marginBottom="8dp"/>
+                <Button android:id="@+id/btnAddTeacher" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="+ Создать протокол учителя"
+                    android:layout_marginBottom="8dp"/>
+                <Button android:id="@+id/btnLoadBook" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="📚 Загрузить учебник"
+                    android:layout_marginBottom="8dp"/>
+                <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
                     android:layout_weight="1">
-                    <LinearLayout
-                        android:id="@+id/teachersContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/teachersContainer"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
                 </ScrollView>
             </LinearLayout>
         </FrameLayout>
         EOF
 
-        cat << 'EOF' > app/src/main/java/com/example/teacherhelper/MainActivity.java
+        cat > app/src/main/res/layout/item_teacher.xml <<'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="10dp"
+            android:layout_marginBottom="6dp" android:background="#EEEEEE">
+            <TextView android:id="@+id/tvName" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:textSize="18sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvRules" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:textSize="14sp" android:layout_marginTop="4dp"/>
+            <Button android:id="@+id/btnAddRule" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="+ Правило" android:layout_marginTop="6dp"/>
+        </LinearLayout>
+        EOF
+
+        cat > app/src/main/java/com/example/teacherhelper/db/Teacher.java <<'EOF'
+        package com.example.teacherhelper.db;
+        import androidx.room.Entity;
+        import androidx.room.PrimaryKey;
+
+        @Entity(tableName = "teachers")
+        public class Teacher {
+            @PrimaryKey(autoGenerate = true) public int id;
+            public String name;
+            public String rules;
+            public Teacher(String name, String rules) { this.name = name; this.rules = rules; }
+        }
+        EOF
+
+        cat > app/src/main/java/com/example/teacherhelper/db/Book.java <<'EOF'
+        package com.example.teacherhelper.db;
+        import androidx.room.Entity;
+        import androidx.room.PrimaryKey;
+
+        @Entity(tableName = "books")
+        public class Book {
+            @PrimaryKey(autoGenerate = true) public int id;
+            public String title;
+            public String uri;
+            public Book(String title, String uri) { this.title = title; this.uri = uri; }
+        }
+        EOF
+
+        cat > app/src/main/java/com/example/teacherhelper/db/AppDao.java <<'EOF'
+        package com.example.teacherhelper.db;
+        import androidx.room.Dao;
+        import androidx.room.Insert;
+        import androidx.room.Query;
+        import androidx.room.Update;
+        import java.util.List;
+
+        @Dao
+        public interface AppDao {
+            @Query("SELECT * FROM teachers ORDER BY id DESC") List<Teacher> getAllTeachers();
+            @Insert long insertTeacher(Teacher t);
+            @Update void updateTeacher(Teacher t);
+            @Query("SELECT * FROM books ORDER BY id DESC") List<Book> getAllBooks();
+            @Insert long insertBook(Book b);
+        }
+        EOF
+
+        cat > app/src/main/java/com/example/teacherhelper/db/AppDatabase.java <<'EOF'
+        package com.example.teacherhelper.db;
+        import android.content.Context;
+        import androidx.room.Database;
+        import androidx.room.Room;
+        import androidx.room.RoomDatabase;
+
+        @Database(entities = {Teacher.class, Book.class}, version = 1, exportSchema = false)
+        public abstract class AppDatabase extends RoomDatabase {
+            private static volatile AppDatabase INSTANCE;
+            public abstract AppDao dao();
+            public static AppDatabase get(Context ctx) {
+                if (INSTANCE == null) {
+                    synchronized (AppDatabase.class) {
+                        if (INSTANCE == null) {
+                            INSTANCE = Room.databaseBuilder(ctx.getApplicationContext(),
+                                AppDatabase.class, "teacher_helper.db")
+                                .allowMainThreadQueries().build();
+                        }
+                    }
+                }
+                return INSTANCE;
+            }
+        }
+        EOF
+
+        cat > app/src/main/java/com/example/teacherhelper/MainActivity.java <<'EOF'
         package com.example.teacherhelper;
+
         import android.app.Activity;
         import android.app.AlertDialog;
+        import android.content.Intent;
+        import android.net.Uri;
         import android.os.Bundle;
         import android.view.View;
         import android.widget.Button;
@@ -170,63 +230,161 @@ jobs:
         import android.widget.LinearLayout;
         import android.widget.TextView;
         import android.widget.Toast;
+        import androidx.activity.result.ActivityResultLauncher;
+        import androidx.activity.result.contract.ActivityResultContracts;
+        import androidx.appcompat.app.AppCompatActivity;
+        import com.example.teacherhelper.db.AppDatabase;
+        import com.example.teacherhelper.db.Book;
+        import com.example.teacherhelper.db.Teacher;
+        import org.json.JSONArray;
+        import java.util.List;
 
-        public class MainActivity extends Activity {
+        public class MainActivity extends AppCompatActivity {
+
+            private static final String[] VALID_CODES = {"BETA2025", "TEST123", "123"};
+
+            private AppDatabase db;
+            private ActivityResultLauncher<Intent> bookPicker;
+            private LinearLayout teachersContainer;
+
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
                 setContentView(R.layout.activity_main);
+                db = AppDatabase.get(this);
 
                 LinearLayout layoutActivation = findViewById(R.id.layoutActivation);
                 LinearLayout layoutMain = findViewById(R.id.layoutMain);
                 EditText codeInput = findViewById(R.id.codeInput);
                 Button btnLogin = findViewById(R.id.btnLogin);
                 Button btnAddTeacher = findViewById(R.id.btnAddTeacher);
-                LinearLayout teachersContainer = findViewById(R.id.teachersContainer);
+                Button btnLoadBook = findViewById(R.id.btnLoadBook);
+                teachersContainer = findViewById(R.id.teachersContainer);
 
-                btnLogin.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (codeInput.getText().toString().equals("123")) {
-                            layoutActivation.setVisibility(View.GONE);
-                            layoutMain.setVisibility(View.VISIBLE);
-                        } else {
-                            Toast.makeText(MainActivity.this, "Неверный код", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-
-                btnAddTeacher.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                        builder.setTitle("Имя учителя");
-
-                        final EditText input = new EditText(MainActivity.this);
-                        builder.setView(input);
-
-                        builder.setPositiveButton("Сохранить", (dialog, which) -> {
-                            String name = input.getText().toString();
-                            if (!name.isEmpty()) {
-                                TextView tv = new TextView(MainActivity.this);
-                                tv.setText("📁 " + name);
-                                tv.setTextSize(18);
-                                tv.setPadding(0, 25, 0, 25);
-                                teachersContainer.addView(tv);
+                bookPicker = registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                            Uri uri = result.getData().getData();
+                            if (uri != null) {
+                                getContentResolver().takePersistableUriPermission(
+                                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                String title = uri.getLastPathSegment();
+                                db.dao().insertBook(new Book(title == null ? "book" : title, uri.toString()));
+                                Toast.makeText(this, "Учебник добавлен", Toast.LENGTH_SHORT).show();
                             }
-                        });
-                        builder.setNegativeButton("Отмена", (dialog, which) -> dialog.cancel());
-                        builder.show();
+                        }
+                    });
+
+                if (isActivated()) {
+                    layoutActivation.setVisibility(View.GONE);
+                    layoutMain.setVisibility(View.VISIBLE);
+                    renderTeachers();
+                }
+
+                btnLogin.setOnClickListener(v -> {
+                    String code = codeInput.getText().toString().trim();
+                    if (isValidCode(code)) {
+                        getSharedPreferences("activation", MODE_PRIVATE)
+                            .edit().putString("code", code).apply();
+                        layoutActivation.setVisibility(View.GONE);
+                        layoutMain.setVisibility(View.VISIBLE);
+                        renderTeachers();
+                    } else {
+                        Toast.makeText(this, "Неверный код", Toast.LENGTH_LONG).show();
                     }
                 });
+
+                btnAddTeacher.setOnClickListener(v -> {
+                    AlertDialog.Builder b = new AlertDialog.Builder(this);
+                    b.setTitle("Имя учителя");
+                    final EditText input = new EditText(this);
+                    b.setView(input);
+                    b.setPositiveButton("Сохранить", (d, w) -> {
+                        String name = input.getText().toString().trim();
+                        if (!name.isEmpty()) {
+                            db.dao().insertTeacher(new Teacher(name, "[]"));
+                            renderTeachers();
+                        }
+                    });
+                    b.setNegativeButton("Отмена", (d, w) -> d.cancel());
+                    b.show();
+                });
+
+                btnLoadBook.setOnClickListener(v -> {
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    bookPicker.launch(i);
+                });
+            }
+
+            private boolean isValidCode(String code) {
+                for (String c : VALID_CODES) if (c.equals(code)) return true;
+                return false;
+            }
+
+            private boolean isActivated() {
+                String code = getSharedPreferences("activation", MODE_PRIVATE)
+                    .getString("code", null);
+                return code != null && isValidCode(code);
+            }
+
+            private void renderTeachers() {
+                teachersContainer.removeAllViews();
+                List<Teacher> list = db.dao().getAllTeachers();
+                for (Teacher t : list) {
+                    View row = getLayoutInflater().inflate(R.layout.item_teacher, teachersContainer, false);
+                    TextView tvName = row.findViewById(R.id.tvName);
+                    TextView tvRules = row.findViewById(R.id.tvRules);
+                    Button btnAddRule = row.findViewById(R.id.btnAddRule);
+                    tvName.setText("📁  " + t.name);
+                    tvRules.setText(rulesToText(t.rules));
+                    btnAddRule.setOnClickListener(v -> showAddRuleDialog(t));
+                    teachersContainer.addView(row);
+                }
+            }
+
+            private String rulesToText(String rulesJson) {
+                try {
+                    JSONArray arr = new JSONArray(rulesJson);
+                    if (arr.length() == 0) return "Правил пока нет";
+                    StringBuilder sb = new StringBuilder("Правила:\n");
+                    for (int i = 0; i < arr.length(); i++) sb.append("• ").append(arr.getString(i)).append("\n");
+                    return sb.toString();
+                } catch (Exception e) { return "Правил пока нет"; }
+            }
+
+            private void showAddRuleDialog(Teacher t) {
+                AlertDialog.Builder b = new AlertDialog.Builder(this);
+                b.setTitle("Правило для " + t.name);
+                final EditText input = new EditText(this);
+                input.setHint("Например: квадратные уравнения — только через Виета");
+                b.setView(input);
+                b.setPositiveButton("Добавить", (d, w) -> {
+                    String rule = input.getText().toString().trim();
+                    if (rule.isEmpty()) return;
+                    try {
+                        JSONArray arr = new JSONArray(t.rules);
+                        arr.put(rule);
+                        t.rules = arr.toString();
+                        db.dao().updateTeacher(t);
+                        renderTeachers();
+                    } catch (Exception e) { e.printStackTrace(); }
+                });
+                b.setNegativeButton("Отмена", (d, w) -> d.cancel());
+                b.show();
             }
         }
         EOF
 
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.1.1'
 
     - name: Build APK
-      run: gradle :app:assembleDebug --no-daemon
+      run: gradle :app:assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
