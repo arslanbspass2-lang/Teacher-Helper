@@ -69,15 +69,12 @@ jobs:
                 versionName "1.0"
             }
         }
-        dependencies {
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-        }
         EOF
 
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application android:label="TeacherHelper">
+            <application android:label="TeacherHelper" android:theme="@android:style/Theme.DeviceDefault">
                 <activity android:name=".MainActivity" android:exported="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
@@ -92,8 +89,9 @@ jobs:
         package com.example.teacherhelper;
         import android.os.Bundle;
         import android.widget.TextView;
-        import androidx.appcompat.app.AppCompatActivity;
-        public class MainActivity extends AppCompatActivity {
+        import android.app.Activity;
+        
+        public class MainActivity extends Activity {
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
