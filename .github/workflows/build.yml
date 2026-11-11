@@ -665,7 +665,11 @@ jobs:
     - name: Build APK
       run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-    - uses: actions/upload-artifact@v4
+    # ЖЕЛЕЗОБЕТОННЫЙ ШАГ ДЛЯ СКАЧИВАНИЯ
+    - name: Upload APK Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: TeacherHelper-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: app/build/outputs/apk/**/*.apk
+        if-no-files-found: warn
