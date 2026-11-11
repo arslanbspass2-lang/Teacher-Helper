@@ -91,7 +91,6 @@ jobs:
         cat > app/src/main/AndroidManifest.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
             <application
                 android:label="TeacherHelper"
                 android:theme="@style/Theme.TeacherHelper"
@@ -372,11 +371,9 @@ jobs:
 
         import android.app.Activity;
         import android.app.AlertDialog;
-        import android.content.Context;
         import android.content.Intent;
         import android.net.Uri;
         import android.os.Bundle;
-        import android.provider.Settings;
         import android.view.GestureDetector;
         import android.view.MotionEvent;
         import android.view.View;
@@ -445,7 +442,7 @@ jobs:
                 // Логика SOS
                 btnSOS.setOnClickListener(v -> {
                     try {
-                        // Сохраняем текущую яркость
+                        // Сохраняем текущую яркость окна
                         WindowManager.LayoutParams lp = getWindow().getAttributes();
                         defaultBrightness = lp.screenBrightness;
                         
