@@ -70,7 +70,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "0.3-beta"
+                versionName "0.4-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -82,6 +82,7 @@ jobs:
             implementation 'androidx.room:room-runtime:2.6.1'
             annotationProcessor 'androidx.room:room-compiler:2.6.1'
             implementation 'androidx.documentfile:documentfile:1.0.1'
+            implementation 'androidx.core:core:1.12.0'
         }
         GRADLE
 
@@ -194,7 +195,6 @@ jobs:
                         android:orientation="vertical"/>
                 </ScrollView>
 
-                <!-- Кнопка SOS внизу экрана -->
                 <Button
                     android:id="@+id/btnSOS"
                     android:layout_width="match_parent"
@@ -207,11 +207,12 @@ jobs:
                     android:layout_marginBottom="10dp"/>
             </LinearLayout>
 
-            <!-- Абсолютно черный экран поверх всего -->
+            <!-- Черный экран, который растягивается на ВЕСЬ экран -->
             <View
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_margin="-16dp" 
                 android:background="#000000"
                 android:visibility="gone"
                 android:clickable="true"
@@ -373,6 +374,7 @@ jobs:
         import android.app.AlertDialog;
         import android.content.Intent;
         import android.net.Uri;
+        import android.os.Build;
         import android.os.Bundle;
         import android.view.GestureDetector;
         import android.view.MotionEvent;
@@ -387,6 +389,9 @@ jobs:
         import androidx.activity.result.ActivityResultLauncher;
         import androidx.activity.result.contract.ActivityResultContracts;
         import androidx.appcompat.app.AppCompatActivity;
+        import androidx.core.view.WindowCompat;
+        import androidx.core.view.WindowInsetsCompat;
+        import androidx.core.view.WindowInsetsControllerCompat;
 
         import com.example.teacherhelper.db.AppDatabase;
         import com.example.teacherhelper.db.Book;
@@ -411,6 +416,13 @@ jobs:
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
                 setContentView(R.layout.activity_main);
+                
+                // Делаем так, чтобы приложение могло рисовать на вырезе камеры (если он есть)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    getWindow().getAttributes().layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                }
+                
                 db = AppDatabase.get(this);
 
                 LinearLayout layoutActivation = findViewById(R.id.layoutActivation);
@@ -430,6 +442,7 @@ jobs:
                     public boolean onDoubleTap(MotionEvent e) {
                         restoreBrightness();
                         panicScreen.setVisibility(View.GONE);
+                        showSystemUI();
                         return true;
                     }
                 });
@@ -442,16 +455,15 @@ jobs:
                 // Логика SOS
                 btnSOS.setOnClickListener(v -> {
                     try {
-                        // Сохраняем текущую яркость окна
                         WindowManager.LayoutParams lp = getWindow().getAttributes();
                         defaultBrightness = lp.screenBrightness;
                         
-                        // Ставим минимальную яркость (1%)
+                        // Минимальная яркость
                         lp.screenBrightness = 0.01f;
                         getWindow().setAttributes(lp);
                         
                         panicScreen.setVisibility(View.VISIBLE);
-                        Toast.makeText(this, "Экран скрыт. Двойной тап для возврата", Toast.LENGTH_SHORT).show();
+                        hideSystemUI(); // Прячем панели, чтобы черный экран растянулся на все 100%
                     } catch (Exception e) {
                         panicScreen.setVisibility(View.VISIBLE);
                     }
@@ -515,6 +527,25 @@ jobs:
                 });
 
                 btnListBooks.setOnClickListener(v -> showBooksList());
+            }
+
+            // Скрывает верхнюю панель и кнопки навигации
+            private void hideSystemUI() {
+                WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                if (controller != null) {
+                    controller.hide(WindowInsetsCompat.Type.systemBars());
+                    controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            }
+
+            // Возвращает панели обратно
+            private void showSystemUI() {
+                WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+                WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                if (controller != null) {
+                    controller.show(WindowInsetsCompat.Type.systemBars());
+                }
             }
 
             private void restoreBrightness() {
