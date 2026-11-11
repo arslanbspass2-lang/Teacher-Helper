@@ -207,12 +207,10 @@ jobs:
                     android:layout_marginBottom="10dp"/>
             </LinearLayout>
 
-            <!-- Черный экран, который растягивается на ВЕСЬ экран -->
             <View
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_margin="-16dp" 
                 android:background="#000000"
                 android:visibility="gone"
                 android:clickable="true"
