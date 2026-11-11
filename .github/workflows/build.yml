@@ -76,13 +76,19 @@ jobs:
                 sourceCompatibility JavaVersion.VERSION_1_8
                 targetCompatibility JavaVersion.VERSION_1_8
             }
+            packagingOptions {
+                resources {
+                    excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
+                }
+            }
         }
         dependencies {
             implementation 'androidx.appcompat:appcompat:1.6.1'
             implementation 'androidx.room:room-runtime:2.6.1'
             annotationProcessor 'androidx.room:room-compiler:2.6.1'
             implementation 'androidx.documentfile:documentfile:1.0.1'
-            implementation 'com.github.barteksc:android-pdf-viewer:3.2.0-beta.1'
+            implementation 'androidx.media3:media3-exoplayer:1.1.1'
+            implementation 'com.google.android.material:material:1.9.0'
         }
         GRADLE
 
@@ -207,7 +213,6 @@ jobs:
                 </ScrollView>
             </LinearLayout>
 
-            <!-- Черный экран для паники -->
             <View
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
@@ -388,7 +393,6 @@ jobs:
         import com.example.teacherhelper.db.AppDatabase;
         import com.example.teacherhelper.db.Book;
         import com.example.teacherhelper.db.Teacher;
-        import com.github.barteksc.pdfviewer.PDFView;
 
         import org.json.JSONArray;
 
@@ -420,16 +424,13 @@ jobs:
                 teachersContainer = findViewById(R.id.teachersContainer);
                 panicScreen = findViewById(R.id.panicScreen);
 
-                // Логика кнопки SOS
                 btnSOS.setOnClickListener(v -> {
                     panicScreen.setVisibility(View.VISIBLE);
                     Toast.makeText(this, "Нажмите на экран, чтобы вернуться", Toast.LENGTH_SHORT).show();
                 });
                 
-                // Возврат из черного экрана по нажатию
                 panicScreen.setOnClickListener(v -> panicScreen.setVisibility(View.GONE));
 
-                // Выбор файла
                 bookPicker = registerForActivityResult(
                         new ActivityResultContracts.StartActivityForResult(),
                         result -> {
@@ -582,31 +583,20 @@ jobs:
                 String[] options = {"Открыть", "Удалить"};
                 builder.setItems(options, (dialog, which) -> {
                     if (which == 0) {
-                        openPdf(book);
+                        // Открываем системную читалку PDF (самый надежный способ без глючных библиотек)
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            intent.setDataAndType(Uri.parse(book.uri), "application/pdf");
+                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            Toast.makeText(this, "На телефоне нет программы для чтения PDF", Toast.LENGTH_SHORT).show();
+                        }
                     } else {
                         db.dao().deleteBook(book);
                         Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
                     }
                 });
-                builder.show();
-            }
-
-            private void openPdf(Book book) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                PDFView pdfView = new PDFView(this, null);
-                try {
-                    pdfView.fromUri(Uri.parse(book.uri))
-                            .enableSwipe(true)
-                            .swipeHorizontal(false)
-                            .enableDoubletap(true)
-                            .defaultPage(0)
-                            .load();
-                } catch (Exception e) {
-                    Toast.makeText(this, "Ошибка чтения PDF", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                builder.setView(pdfView);
-                builder.setPositiveButton("Закрыть", (d, w) -> d.dismiss());
                 builder.show();
             }
         }
