@@ -70,16 +70,11 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "0.2-beta"
+                versionName "0.3-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
                 targetCompatibility JavaVersion.VERSION_1_8
-            }
-            packagingOptions {
-                resources {
-                    excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
-                }
             }
         }
         dependencies {
@@ -87,8 +82,6 @@ jobs:
             implementation 'androidx.room:room-runtime:2.6.1'
             annotationProcessor 'androidx.room:room-compiler:2.6.1'
             implementation 'androidx.documentfile:documentfile:1.0.1'
-            implementation 'androidx.media3:media3-exoplayer:1.1.1'
-            implementation 'com.google.android.material:material:1.9.0'
         }
         GRADLE
 
@@ -98,6 +91,7 @@ jobs:
         cat > app/src/main/AndroidManifest.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
             <application
                 android:label="TeacherHelper"
                 android:theme="@style/Theme.TeacherHelper"
@@ -130,6 +124,7 @@ jobs:
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="16dp">
+            
             <LinearLayout
                 android:id="@+id/layoutActivation"
                 android:layout_width="match_parent"
@@ -155,6 +150,7 @@ jobs:
                     android:layout_height="wrap_content"
                     android:text="Активировать"/>
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/layoutMain"
                 android:layout_width="match_parent"
@@ -162,25 +158,12 @@ jobs:
                 android:orientation="vertical"
                 android:visibility="gone">
                 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="Мои протоколы:"
-                        android:textSize="22sp"
-                        android:layout_marginBottom="8dp"/>
-                    <Button
-                        android:id="@+id/btnSOS"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="SOS"
-                        android:backgroundTint="#FF0000"
-                        android:textColor="#FFFFFF"/>
-                </LinearLayout>
+                    android:text="Мои протоколы:"
+                    android:textSize="22sp"
+                    android:layout_marginBottom="8dp"/>
 
                 <Button
                     android:id="@+id/btnAddTeacher"
@@ -211,8 +194,21 @@ jobs:
                         android:layout_height="wrap_content"
                         android:orientation="vertical"/>
                 </ScrollView>
+
+                <!-- Кнопка SOS внизу экрана -->
+                <Button
+                    android:id="@+id/btnSOS"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:text="SOS (Скрыть)"
+                    android:backgroundTint="#D32F2F"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"/>
             </LinearLayout>
 
+            <!-- Абсолютно черный экран поверх всего -->
             <View
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
@@ -376,10 +372,15 @@ jobs:
 
         import android.app.Activity;
         import android.app.AlertDialog;
+        import android.content.Context;
         import android.content.Intent;
         import android.net.Uri;
         import android.os.Bundle;
+        import android.provider.Settings;
+        import android.view.GestureDetector;
+        import android.view.MotionEvent;
         import android.view.View;
+        import android.view.WindowManager;
         import android.widget.Button;
         import android.widget.EditText;
         import android.widget.LinearLayout;
@@ -406,6 +407,8 @@ jobs:
             private ActivityResultLauncher<Intent> bookPicker;
             private LinearLayout teachersContainer;
             private View panicScreen;
+            private float defaultBrightness;
+            private GestureDetector gestureDetector;
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -424,12 +427,38 @@ jobs:
                 teachersContainer = findViewById(R.id.teachersContainer);
                 panicScreen = findViewById(R.id.panicScreen);
 
-                btnSOS.setOnClickListener(v -> {
-                    panicScreen.setVisibility(View.VISIBLE);
-                    Toast.makeText(this, "Нажмите на экран, чтобы вернуться", Toast.LENGTH_SHORT).show();
+                // Настраиваем детектор двойного тапа для возврата
+                gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+                        restoreBrightness();
+                        panicScreen.setVisibility(View.GONE);
+                        return true;
+                    }
                 });
-                
-                panicScreen.setOnClickListener(v -> panicScreen.setVisibility(View.GONE));
+
+                panicScreen.setOnTouchListener((v, event) -> {
+                    gestureDetector.onTouchEvent(event);
+                    return true;
+                });
+
+                // Логика SOS
+                btnSOS.setOnClickListener(v -> {
+                    try {
+                        // Сохраняем текущую яркость
+                        WindowManager.LayoutParams lp = getWindow().getAttributes();
+                        defaultBrightness = lp.screenBrightness;
+                        
+                        // Ставим минимальную яркость (1%)
+                        lp.screenBrightness = 0.01f;
+                        getWindow().setAttributes(lp);
+                        
+                        panicScreen.setVisibility(View.VISIBLE);
+                        Toast.makeText(this, "Экран скрыт. Двойной тап для возврата", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        panicScreen.setVisibility(View.VISIBLE);
+                    }
+                });
 
                 bookPicker = registerForActivityResult(
                         new ActivityResultContracts.StartActivityForResult(),
@@ -484,11 +513,17 @@ jobs:
                 btnLoadBook.setOnClickListener(v -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType("application/pdf"); // Разрешаем только PDF
+                    i.setType("application/pdf");
                     bookPicker.launch(i);
                 });
 
                 btnListBooks.setOnClickListener(v -> showBooksList());
+            }
+
+            private void restoreBrightness() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.screenBrightness = defaultBrightness;
+                getWindow().setAttributes(lp);
             }
 
             private boolean isValidCode(String code) {
@@ -583,7 +618,6 @@ jobs:
                 String[] options = {"Открыть", "Удалить"};
                 builder.setItems(options, (dialog, which) -> {
                     if (which == 0) {
-                        // Открываем системную читалку PDF (самый надежный способ без глючных библиотек)
                         try {
                             Intent intent = new Intent(Intent.ACTION_VIEW);
                             intent.setDataAndType(Uri.parse(book.uri), "application/pdf");
