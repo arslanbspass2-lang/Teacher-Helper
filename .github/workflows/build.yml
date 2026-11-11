@@ -70,7 +70,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "0.1-beta"
+                versionName "0.2-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -82,6 +82,7 @@ jobs:
             implementation 'androidx.room:room-runtime:2.6.1'
             annotationProcessor 'androidx.room:room-compiler:2.6.1'
             implementation 'androidx.documentfile:documentfile:1.0.1'
+            implementation 'com.github.barteksc:android-pdf-viewer:3.2.0-beta.1'
         }
         GRADLE
 
@@ -154,12 +155,27 @@ jobs:
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:visibility="gone">
-                <TextView
-                    android:layout_width="wrap_content"
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Мои протоколы:"
-                    android:textSize="22sp"
-                    android:layout_marginBottom="8dp"/>
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Мои протоколы:"
+                        android:textSize="22sp"
+                        android:layout_marginBottom="8dp"/>
+                    <Button
+                        android:id="@+id/btnSOS"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SOS"
+                        android:backgroundTint="#FF0000"
+                        android:textColor="#FFFFFF"/>
+                </LinearLayout>
+
                 <Button
                     android:id="@+id/btnAddTeacher"
                     android:layout_width="match_parent"
@@ -172,6 +188,13 @@ jobs:
                     android:layout_height="wrap_content"
                     android:text="Загрузить учебник"
                     android:layout_marginBottom="8dp"/>
+                <Button
+                    android:id="@+id/btnListBooks"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📚 Мои учебники"
+                    android:layout_marginBottom="8dp"/>
+                    
                 <ScrollView
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
@@ -183,6 +206,16 @@ jobs:
                         android:orientation="vertical"/>
                 </ScrollView>
             </LinearLayout>
+
+            <!-- Черный экран для паники -->
+            <View
+                android:id="@+id/panicScreen"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#000000"
+                android:visibility="gone"
+                android:clickable="true"
+                android:focusable="true"/>
         </FrameLayout>
         XML
 
@@ -270,6 +303,7 @@ jobs:
         import androidx.room.Insert;
         import androidx.room.Query;
         import androidx.room.Update;
+        import androidx.room.Delete;
 
         import java.util.List;
 
@@ -289,6 +323,9 @@ jobs:
 
             @Insert
             long insertBook(Book b);
+
+            @Delete
+            void deleteBook(Book b);
         }
         JAVA
 
@@ -351,6 +388,7 @@ jobs:
         import com.example.teacherhelper.db.AppDatabase;
         import com.example.teacherhelper.db.Book;
         import com.example.teacherhelper.db.Teacher;
+        import com.github.barteksc.pdfviewer.PDFView;
 
         import org.json.JSONArray;
 
@@ -363,6 +401,7 @@ jobs:
             private AppDatabase db;
             private ActivityResultLauncher<Intent> bookPicker;
             private LinearLayout teachersContainer;
+            private View panicScreen;
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -376,8 +415,21 @@ jobs:
                 Button btnLogin = findViewById(R.id.btnLogin);
                 Button btnAddTeacher = findViewById(R.id.btnAddTeacher);
                 Button btnLoadBook = findViewById(R.id.btnLoadBook);
+                Button btnListBooks = findViewById(R.id.btnListBooks);
+                Button btnSOS = findViewById(R.id.btnSOS);
                 teachersContainer = findViewById(R.id.teachersContainer);
+                panicScreen = findViewById(R.id.panicScreen);
 
+                // Логика кнопки SOS
+                btnSOS.setOnClickListener(v -> {
+                    panicScreen.setVisibility(View.VISIBLE);
+                    Toast.makeText(this, "Нажмите на экран, чтобы вернуться", Toast.LENGTH_SHORT).show();
+                });
+                
+                // Возврат из черного экрана по нажатию
+                panicScreen.setOnClickListener(v -> panicScreen.setVisibility(View.GONE));
+
+                // Выбор файла
                 bookPicker = registerForActivityResult(
                         new ActivityResultContracts.StartActivityForResult(),
                         result -> {
@@ -431,9 +483,11 @@ jobs:
                 btnLoadBook.setOnClickListener(v -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType("*/*");
+                    i.setType("application/pdf"); // Разрешаем только PDF
                     bookPicker.launch(i);
                 });
+
+                btnListBooks.setOnClickListener(v -> showBooksList());
             }
 
             private boolean isValidCode(String code) {
@@ -499,6 +553,61 @@ jobs:
                 });
                 b.setNegativeButton("Отмена", (d, w) -> d.cancel());
                 b.show();
+            }
+
+            private void showBooksList() {
+                List<Book> books = db.dao().getAllBooks();
+                if (books.isEmpty()) {
+                    Toast.makeText(this, "Учебников нет", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                String[] titles = new String[books.size()];
+                for (int i = 0; i < books.size(); i++) {
+                    titles[i] = books.get(i).title;
+                }
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Выберите учебник");
+                builder.setItems(titles, (dialog, which) -> {
+                    Book selectedBook = books.get(which);
+                    showBookOptions(selectedBook);
+                });
+                builder.show();
+            }
+
+            private void showBookOptions(Book book) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle(book.title);
+                String[] options = {"Открыть", "Удалить"};
+                builder.setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        openPdf(book);
+                    } else {
+                        db.dao().deleteBook(book);
+                        Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                builder.show();
+            }
+
+            private void openPdf(Book book) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                PDFView pdfView = new PDFView(this, null);
+                try {
+                    pdfView.fromUri(Uri.parse(book.uri))
+                            .enableSwipe(true)
+                            .swipeHorizontal(false)
+                            .enableDoubletap(true)
+                            .defaultPage(0)
+                            .load();
+                } catch (Exception e) {
+                    Toast.makeText(this, "Ошибка чтения PDF", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                builder.setView(pdfView);
+                builder.setPositiveButton("Закрыть", (d, w) -> d.dismiss());
+                builder.show();
             }
         }
         JAVA
