@@ -96,7 +96,9 @@ jobs:
                 android:label="TeacherHelper"
                 android:theme="@style/Theme.TeacherHelper"
                 android:allowBackup="false">
-                <activity android:name=".MainActivity" android:exported="true">
+                <activity android:name=".MainActivity" 
+                    android:exported="true"
+                    android:configChanges="orientation|screenSize|keyboardHidden">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
@@ -112,9 +114,10 @@ jobs:
         cat > app/src/main/res/values/themes.xml <<'XML'
         <resources>
             <style name="Theme.TeacherHelper" parent="Theme.AppCompat.Light.NoActionBar">
-                <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+                <item name="android:windowLayoutInDisplayCutoutMode">always</item>
                 <item name="android:statusBarColor">@android:color/transparent</item>
                 <item name="android:navigationBarColor">@android:color/transparent</item>
+                <item name="android:windowBackground">@android:color/white</item>
             </style>
         </resources>
         XML
@@ -211,10 +214,12 @@ jobs:
                     android:layout_marginBottom="10dp"/>
             </LinearLayout>
 
-            <View
+            <!-- Теперь это ImageView на весь экран -->
+            <ImageView
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:scaleType="centerCrop"
                 android:background="#000000"
                 android:visibility="gone"
                 android:clickable="true"
@@ -384,6 +389,7 @@ jobs:
         import android.view.WindowManager;
         import android.widget.Button;
         import android.widget.EditText;
+        import android.widget.ImageView;
         import android.widget.LinearLayout;
         import android.widget.TextView;
         import android.widget.Toast;
@@ -410,7 +416,7 @@ jobs:
             private AppDatabase db;
             private ActivityResultLauncher<Intent> bookPicker;
             private LinearLayout teachersContainer;
-            private View panicScreen;
+            private ImageView panicScreen;
             private float defaultBrightness;
             private GestureDetector gestureDetector;
 
@@ -419,11 +425,10 @@ jobs:
                 super.onCreate(savedInstanceState);
                 setContentView(R.layout.activity_main);
                 
-                // Настраиваем, чтобы приложение рисовало под вырезом камеры и панелями
                 WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     getWindow().getAttributes().layoutInDisplayCutoutMode =
-                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
                 }
                 
                 db = AppDatabase.get(this);
@@ -462,7 +467,6 @@ jobs:
                         
                         panicScreen.setVisibility(View.VISIBLE);
                         
-                        // Принудительно скрываем системные панели
                         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
                         if (controller != null) {
                             controller.hide(WindowInsetsCompat.Type.systemBars());
