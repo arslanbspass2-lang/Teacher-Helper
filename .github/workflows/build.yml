@@ -70,7 +70,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "0.7-beta"
+                versionName "1.1-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -118,7 +118,6 @@ jobs:
                 <item name="android:statusBarColor">@android:color/transparent</item>
                 <item name="android:navigationBarColor">@android:color/transparent</item>
                 <item name="android:windowBackground">@android:color/white</item>
-                <!-- Убираем принудительный контраст, чтобы не было белых полос -->
                 <item name="android:enforceStatusBarContrast">false</item>
                 <item name="android:enforceNavigationBarContrast">false</item>
             </style>
@@ -162,62 +161,74 @@ jobs:
                     android:text="Активировать"/>
             </LinearLayout>
 
-            <LinearLayout
+            <ScrollView
                 android:id="@+id/layoutMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:padding="16dp"
                 android:visibility="gone"
                 android:background="#FFFFFF">
                 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Мои протоколы:"
-                    android:textSize="22sp"
-                    android:layout_marginBottom="8dp"/>
-
-                <Button
-                    android:id="@+id/btnAddTeacher"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="+ Создать протокол учителя"
-                    android:layout_marginBottom="8dp"/>
-                <Button
-                    android:id="@+id/btnLoadBook"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Загрузить учебник"
-                    android:layout_marginBottom="8dp"/>
-                <Button
-                    android:id="@+id/btnListBooks"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="📚 Мои учебники"
-                    android:layout_marginBottom="8dp"/>
+                    android:orientation="vertical"
+                    android:padding="16dp">
                     
-                <ScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Мои протоколы:"
+                        android:textSize="22sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Button
+                        android:id="@+id/btnAddTeacher"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="+ Создать протокол учителя"
+                        android:layout_marginBottom="8dp"/>
+                    <Button
+                        android:id="@+id/btnLoadBook"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Загрузить учебник"
+                        android:layout_marginBottom="8dp"/>
+                    <Button
+                        android:id="@+id/btnListBooks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📚 Мои учебники"
+                        android:layout_marginBottom="8dp"/>
+                    <Button
+                        android:id="@+id/btnSolve"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🤖 Умный помощник (ИИ)"
+                        android:layout_marginBottom="8dp"
+                        android:backgroundTint="#4CAF50"
+                        android:textColor="#FFFFFF"/>
+                        
                     <LinearLayout
                         android:id="@+id/teachersContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"/>
-                </ScrollView>
+                        android:orientation="vertical"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="20dp"/>
+                </LinearLayout>
+            </ScrollView>
 
-                <Button
-                    android:id="@+id/btnSOS"
-                    android:layout_width="match_parent"
-                    android:layout_height="60dp"
-                    android:text="SOS (Скрыть)"
-                    android:backgroundTint="#D32F2F"
-                    android:textColor="#FFFFFF"
-                    android:textSize="18sp"
-                    android:layout_marginTop="10dp"/>
-            </LinearLayout>
+            <Button
+                android:id="@+id/btnSOS"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="SOS (Скрыть)"
+                android:backgroundTint="#D32F2F"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:layout_gravity="bottom"
+                android:layout_margin="16dp"
+                android:visibility="gone"/>
 
             <ImageView
                 android:id="@+id/panicScreen"
@@ -381,7 +392,6 @@ jobs:
         cat > app/src/main/java/com/example/teacherhelper/MainActivity.java <<'JAVA'
         package com.example.teacherhelper;
 
-        import android.app.Activity;
         import android.app.AlertDialog;
         import android.content.Intent;
         import android.net.Uri;
@@ -395,6 +405,7 @@ jobs:
         import android.widget.EditText;
         import android.widget.ImageView;
         import android.widget.LinearLayout;
+        import android.widget.ScrollView;
         import android.widget.TextView;
         import android.widget.Toast;
 
@@ -412,6 +423,8 @@ jobs:
         import org.json.JSONArray;
 
         import java.util.List;
+        import java.util.regex.Matcher;
+        import java.util.regex.Pattern;
 
         public class MainActivity extends AppCompatActivity {
 
@@ -421,6 +434,8 @@ jobs:
             private ActivityResultLauncher<Intent> bookPicker;
             private LinearLayout teachersContainer;
             private ImageView panicScreen;
+            private ScrollView layoutMain;
+            private Button btnSOS;
             private float defaultBrightness;
             private GestureDetector gestureDetector;
 
@@ -428,10 +443,7 @@ jobs:
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
                 
-                // Включаем режим Edge-to-Edge (от края до края)
                 WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-                
-                // Разрешаем рисовать на вырезе камеры
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     getWindow().getAttributes().layoutInDisplayCutoutMode =
                             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
@@ -441,13 +453,14 @@ jobs:
                 db = AppDatabase.get(this);
 
                 LinearLayout layoutActivation = findViewById(R.id.layoutActivation);
-                LinearLayout layoutMain = findViewById(R.id.layoutMain);
+                layoutMain = findViewById(R.id.layoutMain);
                 EditText codeInput = findViewById(R.id.codeInput);
                 Button btnLogin = findViewById(R.id.btnLogin);
                 Button btnAddTeacher = findViewById(R.id.btnAddTeacher);
                 Button btnLoadBook = findViewById(R.id.btnLoadBook);
                 Button btnListBooks = findViewById(R.id.btnListBooks);
-                Button btnSOS = findViewById(R.id.btnSOS);
+                Button btnSolve = findViewById(R.id.btnSolve);
+                btnSOS = findViewById(R.id.btnSOS);
                 teachersContainer = findViewById(R.id.teachersContainer);
                 panicScreen = findViewById(R.id.panicScreen);
 
@@ -501,6 +514,7 @@ jobs:
                 if (isActivated()) {
                     layoutActivation.setVisibility(View.GONE);
                     layoutMain.setVisibility(View.VISIBLE);
+                    btnSOS.setVisibility(View.VISIBLE);
                     renderTeachers();
                 }
 
@@ -511,6 +525,7 @@ jobs:
                                 .edit().putString("code", code).apply();
                         layoutActivation.setVisibility(View.GONE);
                         layoutMain.setVisibility(View.VISIBLE);
+                        btnSOS.setVisibility(View.VISIBLE);
                         renderTeachers();
                     } else {
                         Toast.makeText(this, "Неверный код", Toast.LENGTH_LONG).show();
@@ -541,6 +556,165 @@ jobs:
                 });
 
                 btnListBooks.setOnClickListener(v -> showBooksList());
+                btnSolve.setOnClickListener(v -> showSolveDialog());
+            }
+
+            private void showSolveDialog() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("🤖 Умный помощник");
+
+                LinearLayout layout = new LinearLayout(this);
+                layout.setOrientation(LinearLayout.VERTICAL);
+                layout.setPadding(16, 16, 16, 16);
+
+                TextView tvTeacher = new TextView(this);
+                tvTeacher.setText("Учитель (для поиска правил):");
+                layout.addView(tvTeacher);
+
+                final EditText inputTeacher = new EditText(this);
+                inputTeacher.setHint("Например: Наталья Николаевна");
+                layout.addView(inputTeacher);
+
+                TextView tvTask = new TextView(this);
+                tvTask.setText("Ваш вопрос или задача:");
+                layout.addView(tvTask);
+
+                final EditText inputTask = new EditText(this);
+                inputTask.setHint("Любой предмет (математика, история, русский...)");
+                layout.addView(inputTask);
+
+                builder.setView(layout);
+                builder.setPositiveButton("Найти ответ", (dialog, which) -> {
+                    String teacherName = inputTeacher.getText().toString().trim();
+                    String task = inputTask.getText().toString().trim();
+                    
+                    if (task.isEmpty()) {
+                        Toast.makeText(this, "Введите вопрос", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String result = processQuestion(task, teacherName);
+                    showResult(result);
+                });
+                builder.setNegativeButton("Отмена", (d, w) -> d.cancel());
+                builder.show();
+            }
+
+            private String processQuestion(String question, String teacherName) {
+                StringBuilder sb = new StringBuilder();
+                
+                // Ищем правила учителя
+                List<Teacher> teachers = db.dao().getAllTeachers();
+                String teacherRule = "";
+                for (Teacher t : teachers) {
+                    if (t.name.equalsIgnoreCase(teacherName)) {
+                        try {
+                            JSONArray arr = new JSONArray(t.rules);
+                            for (int i = 0; i < arr.length(); i++) {
+                                teacherRule += arr.getString(i) + " ";
+                            }
+                        } catch (Exception e) {}
+                    }
+                }
+
+                sb.append("👨‍🏫 Учитель: ").append(teacherName.isEmpty() ? "Не выбран" : teacherName).append("\n");
+                if (!teacherRule.isEmpty()) {
+                    sb.append("📌 Правила: ").append(teacherRule.trim()).append("\n\n");
+                }
+
+                sb.append("❓ Вопрос: ").append(question).append("\n\n");
+                
+                // 1. Проверяем, не математика ли это (ищем x^2)
+                String cleanTask = question.replace(" ", "").replace("=0", "").replace("X", "x");
+                Pattern pattern = Pattern.compile("([-+]?\\d*)x\\^2([-+]?\\d*)x([-+]?\\d+)");
+                Matcher matcher = pattern.matcher(cleanTask);
+                
+                if (matcher.find()) {
+                    // Это математика. Считаем!
+                    try {
+                        String aStr = matcher.group(1).replace("+", "");
+                        String bStr = matcher.group(2).replace("+", "");
+                        String cStr = matcher.group(3).replace("+", "");
+                        
+                        double a = aStr.isEmpty() || aStr.equals("-") ? (aStr.equals("-") ? -1 : 1) : Double.parseDouble(aStr);
+                        double b = bStr.isEmpty() || bStr.equals("-") ? (bStr.equals("-") ? -1 : 1) : Double.parseDouble(bStr);
+                        double c = cStr.isEmpty() ? 0 : Double.parseDouble(cStr);
+
+                        double D = b * b - 4 * a * c;
+                        
+                        sb.append("✅ Это квадратное уравнение.\n");
+                        sb.append("a = ").append(a).append(", b = ").append(b).append(", c = ").append(c).append("\n\n");
+
+                        if (teacherRule.toLowerCase().contains("виета")) {
+                            sb.append("🎯 Решаем через теорему Виета (по правилу учителя):\n");
+                            sb.append("Сумма корней = ").append(-b/a).append("\n");
+                            sb.append("Произведение = ").append(c/a).append("\n");
+                            sb.append("Ответ: x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append(", x2 = ").append((-b - Math.sqrt(D)) / (2 * a));
+                        } else {
+                            sb.append("🎯 Решаем через дискриминант:\n");
+                            sb.append("D = ").append(D).append("\n");
+                            if (D > 0) {
+                                sb.append("x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append("\n");
+                                sb.append("x2 = ").append((-b - Math.sqrt(D)) / (2 * a)).append("\n");
+                                sb.append("Ответ: x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append(", x2 = ").append((-b - Math.sqrt(D)) / (2 * a));
+                            } else if (D == 0) {
+                                sb.append("Ответ: x = ").append(-b / (2 * a));
+                            } else {
+                                sb.append("Ответ: Корней нет (D < 0).");
+                            }
+                        }
+                    } catch (Exception e) {
+                        sb.append("Не удалось распознать уравнение. Пишите в формате: x^2 - 5x + 6 = 0");
+                    }
+                } else {
+                    // Это не математика. Ищем ответ в правилах учителя по ключевым словам.
+                    sb.append("🔍 Это не уравнение. Ищу ответ в правилах учителя...\n\n");
+                    
+                    if (teacherRule.isEmpty()) {
+                        sb.append("❌ У этого учителя пока нет правил.\n");
+                        sb.append("Добавьте правило (например, 'Сочинение должно быть 250 слов'), и я запомню его!");
+                    } else {
+                        // Разбиваем вопрос на слова для поиска
+                        String[] words = question.toLowerCase().split(" ");
+                        boolean found = false;
+                        String matchedRule = "";
+                        
+                        for (String word : words) {
+                            if (word.length() > 3 && teacherRule.toLowerCase().contains(word)) {
+                                found = true;
+                                matchedRule = teacherRule;
+                                break;
+                            }
+                        }
+                        
+                        if (found) {
+                            sb.append("📖 Найдено в протоколе учителя:\n");
+                            sb.append("👉 ").append(matchedRule.trim()).append("\n\n");
+                            
+                            // Дополнительные советы по предметам
+                            if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин")) {
+                                sb.append("💡 Совет: В учебнике литературы найдите главу про Евгения Онегина. Обратите внимание на письмо Татьяны.");
+                            } else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812")) {
+                                sb.append("💡 Совет: В учебнике истории найдите раздел про Отечественную войну 1812 года.");
+                            } else {
+                                sb.append("💡 Совет: Откройте учебник по этому предмету и найдите нужную тему.");
+                            }
+                        } else {
+                            sb.append("❌ В правилах учителя нет ответа на этот вопрос.\n");
+                            sb.append("💡 Рекомендация: Откройте учебник по этому предмету.");
+                        }
+                    }
+                }
+                
+                return sb.toString();
+            }
+
+            private void showResult(String result) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Ответ помощника");
+                builder.setMessage(result);
+                builder.setPositiveButton("ОК", (d, w) -> d.dismiss());
+                builder.show();
             }
 
             private void restoreBrightness() {
