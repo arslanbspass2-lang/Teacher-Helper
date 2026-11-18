@@ -13,15 +13,10 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Download and Setup Gradle 8.1.1
-      run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.1.1-bin.zip
-        unzip -q gradle-8.1.1-bin.zip
-        echo "$PWD/gradle-8.1.1/bin" >> $GITHUB_PATH
-
-    - name: Create local.properties
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.1.1'
 
     - name: Write settings.gradle
       run: |
@@ -75,7 +70,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "2.1-chat"
+                versionName "2.3-chat"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -130,24 +125,23 @@ jobs:
         </resources>
         XML
 
-    - name: Write activity_main layout (ЧАТ)
+    - name: Write activity_main layout
       run: |
         mkdir -p app/src/main/res/layout
         cat > app/src/main/res/layout/activity_main.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="#FFFFFF">
-
+            android:layout_height="match_parent">
+            
             <LinearLayout
                 android:id="@+id/layoutActivation"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:gravity="center">
+                android:gravity="center"
+                android:background="#FFFFFF">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -173,18 +167,17 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:visibility="gone">
-
-                <!-- Верхняя панель: Учителя, Учебники -->
+                android:visibility="gone"
+                android:background="#FFFFFF">
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:padding="8dp"
-                    android:background="#F0F0F0"
-                    android:gravity="center_vertical">
+                    android:background="#F0F0F0">
                     <Button
-                        android:id="@+id/btnTeachers"
+                        android:id="@+id/btnAddTeacher"
                         android:layout_width="0dp"
                         android:layout_height="40dp"
                         android:layout_weight="1"
@@ -192,7 +185,7 @@ jobs:
                         android:textSize="12sp"
                         android:layout_marginEnd="4dp"/>
                     <Button
-                        android:id="@+id/btnBooks"
+                        android:id="@+id/btnListBooks"
                         android:layout_width="0dp"
                         android:layout_height="40dp"
                         android:layout_weight="1"
@@ -208,7 +201,6 @@ jobs:
                         android:textSize="12sp"/>
                 </LinearLayout>
 
-                <!-- Окно чата -->
                 <ScrollView
                     android:id="@+id/chatScroll"
                     android:layout_width="match_parent"
@@ -222,7 +214,6 @@ jobs:
                         android:orientation="vertical"/>
                 </ScrollView>
 
-                <!-- Нижняя панель: поле ввода и кнопки -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -264,6 +255,7 @@ jobs:
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- ЧЕРНЫЙ ЭКРАН (ТОЧНО РАБОТАЕТ) -->
             <ImageView
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
@@ -273,7 +265,7 @@ jobs:
                 android:visibility="gone"
                 android:clickable="true"
                 android:focusable="true"/>
-        </LinearLayout>
+        </FrameLayout>
         XML
 
     - name: Write chat item layout
@@ -509,8 +501,8 @@ jobs:
                 LinearLayout layoutMain = findViewById(R.id.layoutMain);
                 EditText codeInput = findViewById(R.id.codeInput);
                 Button btnLogin = findViewById(R.id.btnLogin);
-                Button btnTeachers = findViewById(R.id.btnTeachers);
-                Button btnBooks = findViewById(R.id.btnBooks);
+                Button btnAddTeacher = findViewById(R.id.btnAddTeacher);
+                Button btnListBooks = findViewById(R.id.btnListBooks);
                 Button btnLoadBook = findViewById(R.id.btnLoadBook);
                 Button btnSend = findViewById(R.id.btnSend);
                 EditText inputMessage = findViewById(R.id.inputMessage);
@@ -519,7 +511,7 @@ jobs:
                 chatScroll = findViewById(R.id.chatScroll);
                 panicScreen = findViewById(R.id.panicScreen);
 
-                // Восстанавливаем нормальную яркость при старте (фикс тусклого экрана)
+                // Восстанавливаем яркость при старте
                 WindowManager.LayoutParams lp = getWindow().getAttributes();
                 lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
                 getWindow().setAttributes(lp);
@@ -576,7 +568,6 @@ jobs:
                 if (isActivated()) {
                     layoutActivation.setVisibility(View.GONE);
                     layoutMain.setVisibility(View.VISIBLE);
-                    addMessageToChat("Привет! Задай мне любой вопрос (математика, история, русский...). Я сам пойму, какой учитель нужен.", false);
                 }
 
                 btnLogin.setOnClickListener(v -> {
@@ -586,14 +577,13 @@ jobs:
                                 .edit().putString("code", code).apply();
                         layoutActivation.setVisibility(View.GONE);
                         layoutMain.setVisibility(View.VISIBLE);
-                        addMessageToChat("Привет! Задай мне любой вопрос (математика, история, русский...). Я сам пойму, какой учитель нужен.", false);
                     } else {
                         Toast.makeText(this, "Неверный код", Toast.LENGTH_LONG).show();
                     }
                 });
 
-                btnTeachers.setOnClickListener(v -> showTeachersDialog());
-                btnBooks.setOnClickListener(v -> showBooksList());
+                btnAddTeacher.setOnClickListener(v -> showTeachersDialog());
+                btnListBooks.setOnClickListener(v -> showBooksList());
                 btnLoadBook.setOnClickListener(v -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -608,7 +598,6 @@ jobs:
                     addMessageToChat("Вы: " + question, true);
                     inputMessage.setText("");
                     
-                    // ИИ сам определяет предмет и учителя по ключевым словам
                     String answer = processQuestion(question);
                     addMessageToChat("ИИ: " + answer, false);
                 });
@@ -681,14 +670,14 @@ jobs:
             private String processQuestion(String question) {
                 StringBuilder sb = new StringBuilder();
                 
-                // 1. Пытаемся определить предмет по ключевым словам
+                // 1. Определяем предмет по ключевым словам (без лишних надписей в чате)
                 String subject = "Общий";
                 if (question.matches(".*[a-zA-Z0-9+\\-*/=^].*")) subject = "Математика";
                 else if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин") || question.toLowerCase().contains("сочинение")) subject = "Литература";
                 else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812") || question.toLowerCase().contains("история")) subject = "История";
                 else if (question.toLowerCase().contains("клетка") || question.toLowerCase().contains("биология")) subject = "Биология";
 
-                // 2. Ищем учителя, который ведет этот предмет (или правила которого содержат ключевые слова)
+                // 2. Ищем учителя и правило по ключевым словам из вопроса
                 List<Teacher> teachers = db.dao().getAllTeachers();
                 String matchedTeacherName = "";
                 String matchedRule = "";
@@ -698,7 +687,6 @@ jobs:
                         JSONArray arr = new JSONArray(t.rules);
                         for (int i = 0; i < arr.length(); i++) {
                             String rule = arr.getString(i);
-                            // Если в правиле есть отсылка к предмету или словам из вопроса
                             if (rule.toLowerCase().contains(subject.toLowerCase()) || 
                                 rule.toLowerCase().contains(question.toLowerCase().split(" ")[0])) {
                                 matchedTeacherName = t.name;
@@ -710,15 +698,7 @@ jobs:
                     if (!matchedRule.isEmpty()) break;
                 }
 
-                sb.append("📚 Предмет: ").append(subject).append("\n");
-                if (!matchedTeacherName.isEmpty()) {
-                    sb.append("👨‍🏫 Учитель: ").append(matchedTeacherName).append("\n");
-                    sb.append("📌 Правило: ").append(matchedRule).append("\n\n");
-                } else {
-                    sb.append("\n");
-                }
-
-                // 3. Если это математика, решаем уравнение
+                // 3. Математика - решаем уравнение
                 String cleanTask = question.replace(" ", "").replace("=0", "").replace("X", "x");
                 Pattern pattern = Pattern.compile("([-+]?\\d*)x\\^2([-+]?\\d*)x([-+]?\\d+)");
                 Matcher matcher = pattern.matcher(cleanTask);
@@ -735,14 +715,14 @@ jobs:
 
                         double D = b * b - 4 * a * c;
                         
-                        sb.append("✅ Это квадратное уравнение.\n");
+                        sb.append("Решение:\n");
                         if (matchedRule.toLowerCase().contains("виета")) {
-                            sb.append("🎯 Решаем через теорему Виета (по правилу учителя):\n");
+                            sb.append("Через теорему Виета:\n");
                             sb.append("Сумма корней = ").append(-b/a).append("\n");
                             sb.append("Произведение = ").append(c/a).append("\n");
                             sb.append("Ответ: x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append(", x2 = ").append((-b - Math.sqrt(D)) / (2 * a));
                         } else {
-                            sb.append("🎯 Решаем через дискриминант:\n");
+                            sb.append("Через дискриминант:\n");
                             sb.append("D = ").append(D).append("\n");
                             if (D > 0) {
                                 sb.append("Ответ: x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append(", x2 = ").append((-b - Math.sqrt(D)) / (2 * a));
@@ -753,16 +733,14 @@ jobs:
                             }
                         }
                     } catch (Exception e) {
-                        sb.append("Не удалось распознать уравнение. Пишите в формате: x^2 - 5x + 6 = 0");
+                        sb.append("Не удалось распознать уравнение.");
                     }
                 } else {
-                    // 4. Если это не математика, но есть правило — выдаем его
+                    // 4. Не математика - просто выдаем правило, без вопросов
                     if (!matchedRule.isEmpty()) {
-                        sb.append("💡 Ответ на основе правил учителя:\n");
                         sb.append(matchedRule);
                     } else {
-                        sb.append("❌ Я не нашел подходящего правила у учителей.\n");
-                        sb.append("💡 Рекомендация: Откройте учебник по этому предмету или добавьте правило в протокол учителя.");
+                        sb.append("В правилах учителя нет ответа на этот вопрос.");
                     }
                 }
                 
