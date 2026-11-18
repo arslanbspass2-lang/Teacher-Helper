@@ -13,10 +13,11 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Setup Gradle
+    - name: Setup Gradle (без кэша)
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.1.1'
+        cache-disabled: true
 
     - name: Write settings.gradle
       run: |
@@ -70,7 +71,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "1.1-beta"
+                versionName "1.2-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -603,7 +604,6 @@ jobs:
             private String processQuestion(String question, String teacherName) {
                 StringBuilder sb = new StringBuilder();
                 
-                // Ищем правила учителя
                 List<Teacher> teachers = db.dao().getAllTeachers();
                 String teacherRule = "";
                 for (Teacher t : teachers) {
@@ -624,13 +624,11 @@ jobs:
 
                 sb.append("❓ Вопрос: ").append(question).append("\n\n");
                 
-                // 1. Проверяем, не математика ли это (ищем x^2)
                 String cleanTask = question.replace(" ", "").replace("=0", "").replace("X", "x");
                 Pattern pattern = Pattern.compile("([-+]?\\d*)x\\^2([-+]?\\d*)x([-+]?\\d+)");
                 Matcher matcher = pattern.matcher(cleanTask);
                 
                 if (matcher.find()) {
-                    // Это математика. Считаем!
                     try {
                         String aStr = matcher.group(1).replace("+", "");
                         String bStr = matcher.group(2).replace("+", "");
@@ -667,14 +665,12 @@ jobs:
                         sb.append("Не удалось распознать уравнение. Пишите в формате: x^2 - 5x + 6 = 0");
                     }
                 } else {
-                    // Это не математика. Ищем ответ в правилах учителя по ключевым словам.
                     sb.append("🔍 Это не уравнение. Ищу ответ в правилах учителя...\n\n");
                     
                     if (teacherRule.isEmpty()) {
                         sb.append("❌ У этого учителя пока нет правил.\n");
                         sb.append("Добавьте правило (например, 'Сочинение должно быть 250 слов'), и я запомню его!");
                     } else {
-                        // Разбиваем вопрос на слова для поиска
                         String[] words = question.toLowerCase().split(" ");
                         boolean found = false;
                         String matchedRule = "";
@@ -691,7 +687,6 @@ jobs:
                             sb.append("📖 Найдено в протоколе учителя:\n");
                             sb.append("👉 ").append(matchedRule.trim()).append("\n\n");
                             
-                            // Дополнительные советы по предметам
                             if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин")) {
                                 sb.append("💡 Совет: В учебнике литературы найдите главу про Евгения Онегина. Обратите внимание на письмо Татьяны.");
                             } else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812")) {
