@@ -75,7 +75,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "2.0-chat"
+                versionName "2.1-chat"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -141,7 +141,6 @@ jobs:
             android:orientation="vertical"
             android:background="#FFFFFF">
 
-            <!-- Экран активации -->
             <LinearLayout
                 android:id="@+id/layoutActivation"
                 android:layout_width="match_parent"
@@ -169,7 +168,6 @@ jobs:
                     android:text="Активировать"/>
             </LinearLayout>
 
-            <!-- Главный экран (ЧАТ) -->
             <LinearLayout
                 android:id="@+id/layoutMain"
                 android:layout_width="match_parent"
@@ -177,7 +175,7 @@ jobs:
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Верхняя панель с кнопками -->
+                <!-- Верхняя панель: Учителя, Учебники -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -185,7 +183,6 @@ jobs:
                     android:padding="8dp"
                     android:background="#F0F0F0"
                     android:gravity="center_vertical">
-
                     <Button
                         android:id="@+id/btnTeachers"
                         android:layout_width="0dp"
@@ -279,7 +276,7 @@ jobs:
         </LinearLayout>
         XML
 
-    - name: Write chat item layout (сообщение)
+    - name: Write chat item layout
       run: |
         cat > app/src/main/res/layout/item_chat.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
@@ -493,10 +490,7 @@ jobs:
             private ScrollView chatScroll;
             private ImageView panicScreen;
             private Button btnSOS;
-            private float defaultBrightness = 0.5f;
             private GestureDetector gestureDetector;
-
-            private String activeTeacher = "Без учителя";
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -525,7 +519,7 @@ jobs:
                 chatScroll = findViewById(R.id.chatScroll);
                 panicScreen = findViewById(R.id.panicScreen);
 
-                // Восстанавливаем яркость при старте
+                // Восстанавливаем нормальную яркость при старте (фикс тусклого экрана)
                 WindowManager.LayoutParams lp = getWindow().getAttributes();
                 lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
                 getWindow().setAttributes(lp);
@@ -582,7 +576,7 @@ jobs:
                 if (isActivated()) {
                     layoutActivation.setVisibility(View.GONE);
                     layoutMain.setVisibility(View.VISIBLE);
-                    addMessageToChat("Привет! Я твой умный помощник. Выбери учителя сверху, чтобы я учитывал его правила.", false);
+                    addMessageToChat("Привет! Задай мне любой вопрос (математика, история, русский...). Я сам пойму, какой учитель нужен.", false);
                 }
 
                 btnLogin.setOnClickListener(v -> {
@@ -592,19 +586,14 @@ jobs:
                                 .edit().putString("code", code).apply();
                         layoutActivation.setVisibility(View.GONE);
                         layoutMain.setVisibility(View.VISIBLE);
-                        addMessageToChat("Привет! Я твой умный помощник. Выбери учителя сверху, чтобы я учитывал его правила.", false);
+                        addMessageToChat("Привет! Задай мне любой вопрос (математика, история, русский...). Я сам пойму, какой учитель нужен.", false);
                     } else {
                         Toast.makeText(this, "Неверный код", Toast.LENGTH_LONG).show();
                     }
                 });
 
-                // Кнопка "Учителя" - список и создание
                 btnTeachers.setOnClickListener(v -> showTeachersDialog());
-
-                // Кнопка "Учебники" - список
                 btnBooks.setOnClickListener(v -> showBooksList());
-
-                // Кнопка "Загрузить PDF"
                 btnLoadBook.setOnClickListener(v -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -612,7 +601,6 @@ jobs:
                     bookPicker.launch(i);
                 });
 
-                // Кнопка "Отправить"
                 btnSend.setOnClickListener(v -> {
                     String question = inputMessage.getText().toString().trim();
                     if (question.isEmpty()) return;
@@ -620,7 +608,8 @@ jobs:
                     addMessageToChat("Вы: " + question, true);
                     inputMessage.setText("");
                     
-                    String answer = processQuestion(question, activeTeacher);
+                    // ИИ сам определяет предмет и учителя по ключевым словам
+                    String answer = processQuestion(question);
                     addMessageToChat("ИИ: " + answer, false);
                 });
             }
@@ -631,7 +620,7 @@ jobs:
                 tvMessage.setText(text);
                 
                 if (isUser) {
-                    messageView.setBackgroundColor(0xFFDCF8C6); // Светло-зеленый для пользователя
+                    messageView.setBackgroundColor(0xFFDCF8C6);
                     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -642,29 +631,32 @@ jobs:
                 }
                 
                 chatContainer.addView(messageView);
-                
-                // Прокручиваем чат вниз
                 chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
             }
 
             private void showTeachersDialog() {
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("Выберите учителя или создайте нового");
+                builder.setTitle("Учителя (протоколы)");
 
                 LinearLayout layout = new LinearLayout(this);
                 layout.setOrientation(LinearLayout.VERTICAL);
                 layout.setPadding(16, 16, 16, 16);
 
                 List<Teacher> teachers = db.dao().getAllTeachers();
-                String[] names = new String[teachers.size()];
-                for (int i = 0; i < teachers.size(); i++) {
-                    names[i] = teachers.get(i).name;
+                if (teachers.isEmpty()) {
+                    TextView tv = new TextView(this);
+                    tv.setText("Пока нет ни одного учителя. Нажмите 'Создать нового'.");
+                    layout.addView(tv);
+                } else {
+                    for (Teacher t : teachers) {
+                        TextView tv = new TextView(this);
+                        tv.setText("👨‍🏫 " + t.name);
+                        tv.setTextSize(18);
+                        tv.setPadding(0, 10, 0, 10);
+                        layout.addView(tv);
+                    }
                 }
-
-                builder.setItems(names, (dialog, which) -> {
-                    activeTeacher = teachers.get(which).name;
-                    addMessageToChat("Выбран учитель: " + activeTeacher + ". Теперь я буду учитывать его правила.", false);
-                });
+                builder.setView(layout);
 
                 builder.setPositiveButton("+ Создать нового", (d, w) -> {
                     AlertDialog.Builder b2 = new AlertDialog.Builder(this);
@@ -675,59 +667,58 @@ jobs:
                         String name = input.getText().toString().trim();
                         if (!name.isEmpty()) {
                             db.dao().insertTeacher(new Teacher(name, "[]"));
-                            activeTeacher = name;
-                            addMessageToChat("Создан протокол: " + name + ". Вы можете добавить правила через меню учителей.", false);
+                            Toast.makeText(this, "Учитель " + name + " создан", Toast.LENGTH_SHORT).show();
                         }
                     });
                     b2.setNegativeButton("Отмена", (d2, w2) -> d2.cancel());
                     b2.show();
-                });
-                
-                builder.setNeutralButton("Добавить правило", (d, w) -> {
-                    AlertDialog.Builder b3 = new AlertDialog.Builder(this);
-                    b3.setTitle("Введите правило для " + activeTeacher);
-                    final EditText input = new EditText(this);
-                    b3.setView(input);
-                    b3.setPositiveButton("Сохранить", (d3, w3) -> {
-                        String rule = input.getText().toString().trim();
-                        if (rule.isEmpty()) return;
-                        List<Teacher> all = db.dao().getAllTeachers();
-                        for (Teacher t : all) {
-                            if (t.name.equals(activeTeacher)) {
-                                try {
-                                    JSONArray arr = new JSONArray(t.rules);
-                                    arr.put(rule);
-                                    t.rules = arr.toString();
-                                    db.dao().updateTeacher(t);
-                                    addMessageToChat("Добавлено правило: " + rule, false);
-                                } catch (Exception e) {}
-                            }
-                        }
-                    });
-                    b3.setNegativeButton("Отмена", (d3, w3) -> d3.cancel());
-                    b3.show();
                 });
 
                 builder.setNegativeButton("Закрыть", (d, w) -> d.dismiss());
                 builder.show();
             }
 
-            private String processQuestion(String question, String teacherName) {
+            private String processQuestion(String question) {
                 StringBuilder sb = new StringBuilder();
                 
+                // 1. Пытаемся определить предмет по ключевым словам
+                String subject = "Общий";
+                if (question.matches(".*[a-zA-Z0-9+\\-*/=^].*")) subject = "Математика";
+                else if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин") || question.toLowerCase().contains("сочинение")) subject = "Литература";
+                else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812") || question.toLowerCase().contains("история")) subject = "История";
+                else if (question.toLowerCase().contains("клетка") || question.toLowerCase().contains("биология")) subject = "Биология";
+
+                // 2. Ищем учителя, который ведет этот предмет (или правила которого содержат ключевые слова)
                 List<Teacher> teachers = db.dao().getAllTeachers();
-                String teacherRule = "";
+                String matchedTeacherName = "";
+                String matchedRule = "";
+
                 for (Teacher t : teachers) {
-                    if (t.name.equalsIgnoreCase(teacherName)) {
-                        try {
-                            JSONArray arr = new JSONArray(t.rules);
-                            for (int i = 0; i < arr.length(); i++) {
-                                teacherRule += arr.getString(i) + " ";
+                    try {
+                        JSONArray arr = new JSONArray(t.rules);
+                        for (int i = 0; i < arr.length(); i++) {
+                            String rule = arr.getString(i);
+                            // Если в правиле есть отсылка к предмету или словам из вопроса
+                            if (rule.toLowerCase().contains(subject.toLowerCase()) || 
+                                rule.toLowerCase().contains(question.toLowerCase().split(" ")[0])) {
+                                matchedTeacherName = t.name;
+                                matchedRule = rule;
+                                break;
                             }
-                        } catch (Exception e) {}
-                    }
+                        }
+                    } catch (Exception e) {}
+                    if (!matchedRule.isEmpty()) break;
                 }
 
+                sb.append("📚 Предмет: ").append(subject).append("\n");
+                if (!matchedTeacherName.isEmpty()) {
+                    sb.append("👨‍🏫 Учитель: ").append(matchedTeacherName).append("\n");
+                    sb.append("📌 Правило: ").append(matchedRule).append("\n\n");
+                } else {
+                    sb.append("\n");
+                }
+
+                // 3. Если это математика, решаем уравнение
                 String cleanTask = question.replace(" ", "").replace("=0", "").replace("X", "x");
                 Pattern pattern = Pattern.compile("([-+]?\\d*)x\\^2([-+]?\\d*)x([-+]?\\d+)");
                 Matcher matcher = pattern.matcher(cleanTask);
@@ -745,9 +736,7 @@ jobs:
                         double D = b * b - 4 * a * c;
                         
                         sb.append("✅ Это квадратное уравнение.\n");
-                        sb.append("a = ").append(a).append(", b = ").append(b).append(", c = ").append(c).append("\n\n");
-
-                        if (teacherRule.toLowerCase().contains("виета")) {
+                        if (matchedRule.toLowerCase().contains("виета")) {
                             sb.append("🎯 Решаем через теорему Виета (по правилу учителя):\n");
                             sb.append("Сумма корней = ").append(-b/a).append("\n");
                             sb.append("Произведение = ").append(c/a).append("\n");
@@ -756,8 +745,6 @@ jobs:
                             sb.append("🎯 Решаем через дискриминант:\n");
                             sb.append("D = ").append(D).append("\n");
                             if (D > 0) {
-                                sb.append("x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append("\n");
-                                sb.append("x2 = ").append((-b - Math.sqrt(D)) / (2 * a)).append("\n");
                                 sb.append("Ответ: x1 = ").append((-b + Math.sqrt(D)) / (2 * a)).append(", x2 = ").append((-b - Math.sqrt(D)) / (2 * a));
                             } else if (D == 0) {
                                 sb.append("Ответ: x = ").append(-b / (2 * a));
@@ -769,39 +756,13 @@ jobs:
                         sb.append("Не удалось распознать уравнение. Пишите в формате: x^2 - 5x + 6 = 0");
                     }
                 } else {
-                    sb.append("🔍 Это не уравнение. Ищу ответ в правилах...\n\n");
-                    
-                    if (teacherRule.isEmpty()) {
-                        sb.append("❌ У этого учителя пока нет правил.\n");
-                        sb.append("Добавьте правило через кнопку 'Учителя' сверху!");
+                    // 4. Если это не математика, но есть правило — выдаем его
+                    if (!matchedRule.isEmpty()) {
+                        sb.append("💡 Ответ на основе правил учителя:\n");
+                        sb.append(matchedRule);
                     } else {
-                        String[] words = question.toLowerCase().split(" ");
-                        boolean found = false;
-                        String matchedRule = "";
-                        
-                        for (String word : words) {
-                            if (word.length() > 3 && teacherRule.toLowerCase().contains(word)) {
-                                found = true;
-                                matchedRule = teacherRule;
-                                break;
-                            }
-                        }
-                        
-                        if (found) {
-                            sb.append("📖 Найдено в протоколе учителя:\n");
-                            sb.append("👉 ").append(matchedRule.trim()).append("\n\n");
-                            
-                            if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин")) {
-                                sb.append("💡 Совет: В учебнике литературы найдите главу про Евгения Онегина.");
-                            } else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812")) {
-                                sb.append("💡 Совет: В учебнике истории найдите раздел про Отечественную войну 1812 года.");
-                            } else {
-                                sb.append("💡 Совет: Откройте учебник по этому предмету и найдите нужную тему.");
-                            }
-                        } else {
-                            sb.append("❌ В правилах учителя нет ответа на этот вопрос.\n");
-                            sb.append("💡 Рекомендация: Откройте учебник по этому предмету.");
-                        }
+                        sb.append("❌ Я не нашел подходящего правила у учителей.\n");
+                        sb.append("💡 Рекомендация: Откройте учебник по этому предмету или добавьте правило в протокол учителя.");
                     }
                 }
                 
