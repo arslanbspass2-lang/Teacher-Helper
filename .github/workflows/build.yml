@@ -70,7 +70,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "0.5-beta"
+                versionName "0.7-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -118,6 +118,9 @@ jobs:
                 <item name="android:statusBarColor">@android:color/transparent</item>
                 <item name="android:navigationBarColor">@android:color/transparent</item>
                 <item name="android:windowBackground">@android:color/white</item>
+                <!-- Убираем принудительный контраст, чтобы не было белых полос -->
+                <item name="android:enforceStatusBarContrast">false</item>
+                <item name="android:enforceNavigationBarContrast">false</item>
             </style>
         </resources>
         XML
@@ -129,15 +132,16 @@ jobs:
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="16dp">
+            android:layout_height="match_parent">
             
             <LinearLayout
                 android:id="@+id/layoutActivation"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:padding="16dp"
+                android:gravity="center"
+                android:background="#FFFFFF">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -163,7 +167,9 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:padding="16dp"
+                android:visibility="gone"
+                android:background="#FFFFFF">
                 
                 <TextView
                     android:layout_width="wrap_content"
@@ -210,11 +216,9 @@ jobs:
                     android:backgroundTint="#D32F2F"
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginBottom="10dp"/>
+                    android:layout_marginTop="10dp"/>
             </LinearLayout>
 
-            <!-- Теперь это ImageView на весь экран -->
             <ImageView
                 android:id="@+id/panicScreen"
                 android:layout_width="match_parent"
@@ -423,14 +427,17 @@ jobs:
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
-                setContentView(R.layout.activity_main);
                 
+                // Включаем режим Edge-to-Edge (от края до края)
                 WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                
+                // Разрешаем рисовать на вырезе камеры
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     getWindow().getAttributes().layoutInDisplayCutoutMode =
                             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
                 }
                 
+                setContentView(R.layout.activity_main);
                 db = AppDatabase.get(this);
 
                 LinearLayout layoutActivation = findViewById(R.id.layoutActivation);
