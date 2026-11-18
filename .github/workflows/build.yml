@@ -13,11 +13,12 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Setup Gradle (без кэша)
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.1.1'
-        cache-disabled: true
+    # Скачиваем Gradle напрямую, чтобы не зависеть от сломанного кэша GitHub
+    - name: Download Gradle
+      run: |
+        wget -q https://services.gradle.org/distributions/gradle-8.1.1-bin.zip
+        unzip -q gradle-8.1.1-bin.zip
+        echo "$PWD/gradle-8.1.1/bin" >> $GITHUB_PATH
 
     - name: Write settings.gradle
       run: |
@@ -71,7 +72,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "1.2-beta"
+                versionName "1.3-beta"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -852,4 +853,3 @@ jobs:
         echo "ССЫЛКА НА СКАЧИВАНИЕ APK:"
         echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ github.run_id }}"
         echo "=================================================================="
-             
