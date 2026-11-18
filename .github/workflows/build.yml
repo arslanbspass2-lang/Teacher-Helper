@@ -75,7 +75,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "1.5-beta"
+                versionName "2.0-chat"
             }
             compileOptions {
                 sourceCompatibility JavaVersion.VERSION_1_8
@@ -100,7 +100,8 @@ jobs:
             <application
                 android:label="TeacherHelper"
                 android:theme="@style/Theme.TeacherHelper"
-                android:allowBackup="false">
+                android:allowBackup="false"
+                android:windowSoftInputMode="adjustResize">
                 <activity android:name=".MainActivity" 
                     android:exported="true"
                     android:configChanges="orientation|screenSize|keyboardHidden">
@@ -129,23 +130,25 @@ jobs:
         </resources>
         XML
 
-    - name: Write activity_main layout
+    - name: Write activity_main layout (ЧАТ)
       run: |
         mkdir -p app/src/main/res/layout
         cat > app/src/main/res/layout/activity_main.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
-        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#FFFFFF">
+
+            <!-- Экран активации -->
             <LinearLayout
                 android:id="@+id/layoutActivation"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:gravity="center"
-                android:background="#FFFFFF">
+                android:gravity="center">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -166,74 +169,103 @@ jobs:
                     android:text="Активировать"/>
             </LinearLayout>
 
-            <ScrollView
+            <!-- Главный экран (ЧАТ) -->
+            <LinearLayout
                 android:id="@+id/layoutMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone"
-                android:background="#FFFFFF">
-                
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Верхняя панель с кнопками -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Мои протоколы:"
-                        android:textSize="22sp"
-                        android:layout_marginBottom="8dp"/>
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="#F0F0F0"
+                    android:gravity="center_vertical">
 
                     <Button
-                        android:id="@+id/btnAddTeacher"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="+ Создать протокол учителя"
-                        android:layout_marginBottom="8dp"/>
+                        android:id="@+id/btnTeachers"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Учителя"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="4dp"/>
+                    <Button
+                        android:id="@+id/btnBooks"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Учебники"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="4dp"/>
                     <Button
                         android:id="@+id/btnLoadBook"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Загрузить учебник"
-                        android:layout_marginBottom="8dp"/>
-                    <Button
-                        android:id="@+id/btnListBooks"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📚 Мои учебники"
-                        android:layout_marginBottom="8dp"/>
-                    <Button
-                        android:id="@+id/btnSolve"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="🤖 Умный помощник (ИИ)"
-                        android:layout_marginBottom="8dp"
-                        android:backgroundTint="#4CAF50"
-                        android:textColor="#FFFFFF"/>
-                        
-                    <LinearLayout
-                        android:id="@+id/teachersContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="20dp"/>
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="+ PDF"
+                        android:textSize="12sp"/>
                 </LinearLayout>
-            </ScrollView>
 
-            <Button
-                android:id="@+id/btnSOS"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="SOS (Скрыть)"
-                android:backgroundTint="#D32F2F"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:layout_gravity="bottom"
-                android:layout_margin="16dp"
-                android:visibility="gone"/>
+                <!-- Окно чата -->
+                <ScrollView
+                    android:id="@+id/chatScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:padding="8dp">
+                    <LinearLayout
+                        android:id="@+id/chatContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+                </ScrollView>
+
+                <!-- Нижняя панель: поле ввода и кнопки -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="#F0F0F0"
+                    android:gravity="center_vertical">
+
+                    <Button
+                        android:id="@+id/btnSOS"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:text="SOS"
+                        android:backgroundTint="#D32F2F"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <EditText
+                        android:id="@+id/inputMessage"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Задайте вопрос..."
+                        android:inputType="textMultiLine"
+                        android:maxLines="3"
+                        android:background="@android:drawable/editbox_background"
+                        android:padding="10dp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <Button
+                        android:id="@+id/btnSend"
+                        android:layout_width="wrap_content"
+                        android:layout_height="50dp"
+                        android:text="Отправить"
+                        android:backgroundTint="#4CAF50"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+            </LinearLayout>
 
             <ImageView
                 android:id="@+id/panicScreen"
@@ -244,7 +276,26 @@ jobs:
                 android:visibility="gone"
                 android:clickable="true"
                 android:focusable="true"/>
-        </FrameLayout>
+        </LinearLayout>
+        XML
+
+    - name: Write chat item layout (сообщение)
+      run: |
+        cat > app/src/main/res/layout/item_chat.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="#E0E0E0">
+            <TextView
+                android:id="@+id/tvMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"/>
+        </LinearLayout>
         XML
 
     - name: Write item_teacher layout
@@ -438,12 +489,14 @@ jobs:
 
             private AppDatabase db;
             private ActivityResultLauncher<Intent> bookPicker;
-            private LinearLayout teachersContainer;
+            private LinearLayout chatContainer;
+            private ScrollView chatScroll;
             private ImageView panicScreen;
-            private ScrollView layoutMain;
             private Button btnSOS;
-            private float defaultBrightness;
+            private float defaultBrightness = 0.5f;
             private GestureDetector gestureDetector;
+
+            private String activeTeacher = "Без учителя";
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -459,22 +512,30 @@ jobs:
                 db = AppDatabase.get(this);
 
                 LinearLayout layoutActivation = findViewById(R.id.layoutActivation);
-                layoutMain = findViewById(R.id.layoutMain);
+                LinearLayout layoutMain = findViewById(R.id.layoutMain);
                 EditText codeInput = findViewById(R.id.codeInput);
                 Button btnLogin = findViewById(R.id.btnLogin);
-                Button btnAddTeacher = findViewById(R.id.btnAddTeacher);
+                Button btnTeachers = findViewById(R.id.btnTeachers);
+                Button btnBooks = findViewById(R.id.btnBooks);
                 Button btnLoadBook = findViewById(R.id.btnLoadBook);
-                Button btnListBooks = findViewById(R.id.btnListBooks);
-                Button btnSolve = findViewById(R.id.btnSolve);
+                Button btnSend = findViewById(R.id.btnSend);
+                EditText inputMessage = findViewById(R.id.inputMessage);
                 btnSOS = findViewById(R.id.btnSOS);
-                teachersContainer = findViewById(R.id.teachersContainer);
+                chatContainer = findViewById(R.id.chatContainer);
+                chatScroll = findViewById(R.id.chatScroll);
                 panicScreen = findViewById(R.id.panicScreen);
+
+                // Восстанавливаем яркость при старте
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                getWindow().setAttributes(lp);
 
                 gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
                     @Override
                     public boolean onDoubleTap(MotionEvent e) {
                         restoreBrightness();
                         panicScreen.setVisibility(View.GONE);
+                        btnSOS.setVisibility(View.VISIBLE);
                         return true;
                     }
                 });
@@ -486,12 +547,12 @@ jobs:
 
                 btnSOS.setOnClickListener(v -> {
                     try {
-                        WindowManager.LayoutParams lp = getWindow().getAttributes();
-                        defaultBrightness = lp.screenBrightness;
-                        lp.screenBrightness = 0.01f;
-                        getWindow().setAttributes(lp);
+                        WindowManager.LayoutParams lp2 = getWindow().getAttributes();
+                        lp2.screenBrightness = 0.01f;
+                        getWindow().setAttributes(lp2);
                         
                         panicScreen.setVisibility(View.VISIBLE);
+                        btnSOS.setVisibility(View.GONE);
                         
                         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
                         if (controller != null) {
@@ -499,6 +560,7 @@ jobs:
                         }
                     } catch (Exception e) {
                         panicScreen.setVisibility(View.VISIBLE);
+                        btnSOS.setVisibility(View.GONE);
                     }
                 });
 
@@ -520,8 +582,7 @@ jobs:
                 if (isActivated()) {
                     layoutActivation.setVisibility(View.GONE);
                     layoutMain.setVisibility(View.VISIBLE);
-                    btnSOS.setVisibility(View.VISIBLE);
-                    renderTeachers();
+                    addMessageToChat("Привет! Я твой умный помощник. Выбери учителя сверху, чтобы я учитывал его правила.", false);
                 }
 
                 btnLogin.setOnClickListener(v -> {
@@ -531,29 +592,19 @@ jobs:
                                 .edit().putString("code", code).apply();
                         layoutActivation.setVisibility(View.GONE);
                         layoutMain.setVisibility(View.VISIBLE);
-                        btnSOS.setVisibility(View.VISIBLE);
-                        renderTeachers();
+                        addMessageToChat("Привет! Я твой умный помощник. Выбери учителя сверху, чтобы я учитывал его правила.", false);
                     } else {
                         Toast.makeText(this, "Неверный код", Toast.LENGTH_LONG).show();
                     }
                 });
 
-                btnAddTeacher.setOnClickListener(v -> {
-                    AlertDialog.Builder b = new AlertDialog.Builder(this);
-                    b.setTitle("Имя учителя");
-                    final EditText input = new EditText(this);
-                    b.setView(input);
-                    b.setPositiveButton("Сохранить", (d, w) -> {
-                        String name = input.getText().toString().trim();
-                        if (!name.isEmpty()) {
-                            db.dao().insertTeacher(new Teacher(name, "[]"));
-                            renderTeachers();
-                        }
-                    });
-                    b.setNegativeButton("Отмена", (d, w) -> d.cancel());
-                    b.show();
-                });
+                // Кнопка "Учителя" - список и создание
+                btnTeachers.setOnClickListener(v -> showTeachersDialog());
 
+                // Кнопка "Учебники" - список
+                btnBooks.setOnClickListener(v -> showBooksList());
+
+                // Кнопка "Загрузить PDF"
                 btnLoadBook.setOnClickListener(v -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -561,48 +612,103 @@ jobs:
                     bookPicker.launch(i);
                 });
 
-                btnListBooks.setOnClickListener(v -> showBooksList());
-                btnSolve.setOnClickListener(v -> showSolveDialog());
+                // Кнопка "Отправить"
+                btnSend.setOnClickListener(v -> {
+                    String question = inputMessage.getText().toString().trim();
+                    if (question.isEmpty()) return;
+                    
+                    addMessageToChat("Вы: " + question, true);
+                    inputMessage.setText("");
+                    
+                    String answer = processQuestion(question, activeTeacher);
+                    addMessageToChat("ИИ: " + answer, false);
+                });
             }
 
-            private void showSolveDialog() {
+            private void addMessageToChat(String text, boolean isUser) {
+                View messageView = getLayoutInflater().inflate(R.layout.item_chat, chatContainer, false);
+                TextView tvMessage = messageView.findViewById(R.id.tvMessage);
+                tvMessage.setText(text);
+                
+                if (isUser) {
+                    messageView.setBackgroundColor(0xFFDCF8C6); // Светло-зеленый для пользователя
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                    params.gravity = android.view.Gravity.END;
+                    messageView.setLayoutParams(params);
+                } else {
+                    messageView.setBackgroundColor(0xFFE0E0E0);
+                }
+                
+                chatContainer.addView(messageView);
+                
+                // Прокручиваем чат вниз
+                chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
+            }
+
+            private void showTeachersDialog() {
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("🤖 Умный помощник");
+                builder.setTitle("Выберите учителя или создайте нового");
 
                 LinearLayout layout = new LinearLayout(this);
                 layout.setOrientation(LinearLayout.VERTICAL);
                 layout.setPadding(16, 16, 16, 16);
 
-                TextView tvTeacher = new TextView(this);
-                tvTeacher.setText("Учитель (для поиска правил):");
-                layout.addView(tvTeacher);
+                List<Teacher> teachers = db.dao().getAllTeachers();
+                String[] names = new String[teachers.size()];
+                for (int i = 0; i < teachers.size(); i++) {
+                    names[i] = teachers.get(i).name;
+                }
 
-                final EditText inputTeacher = new EditText(this);
-                inputTeacher.setHint("Например: Наталья Николаевна");
-                layout.addView(inputTeacher);
-
-                TextView tvTask = new TextView(this);
-                tvTask.setText("Ваш вопрос или задача:");
-                layout.addView(tvTask);
-
-                final EditText inputTask = new EditText(this);
-                inputTask.setHint("Любой предмет (математика, история, русский...)");
-                layout.addView(inputTask);
-
-                builder.setView(layout);
-                builder.setPositiveButton("Найти ответ", (dialog, which) -> {
-                    String teacherName = inputTeacher.getText().toString().trim();
-                    String task = inputTask.getText().toString().trim();
-                    
-                    if (task.isEmpty()) {
-                        Toast.makeText(this, "Введите вопрос", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    String result = processQuestion(task, teacherName);
-                    showResult(result);
+                builder.setItems(names, (dialog, which) -> {
+                    activeTeacher = teachers.get(which).name;
+                    addMessageToChat("Выбран учитель: " + activeTeacher + ". Теперь я буду учитывать его правила.", false);
                 });
-                builder.setNegativeButton("Отмена", (d, w) -> d.cancel());
+
+                builder.setPositiveButton("+ Создать нового", (d, w) -> {
+                    AlertDialog.Builder b2 = new AlertDialog.Builder(this);
+                    b2.setTitle("Имя учителя");
+                    final EditText input = new EditText(this);
+                    b2.setView(input);
+                    b2.setPositiveButton("Сохранить", (d2, w2) -> {
+                        String name = input.getText().toString().trim();
+                        if (!name.isEmpty()) {
+                            db.dao().insertTeacher(new Teacher(name, "[]"));
+                            activeTeacher = name;
+                            addMessageToChat("Создан протокол: " + name + ". Вы можете добавить правила через меню учителей.", false);
+                        }
+                    });
+                    b2.setNegativeButton("Отмена", (d2, w2) -> d2.cancel());
+                    b2.show();
+                });
+                
+                builder.setNeutralButton("Добавить правило", (d, w) -> {
+                    AlertDialog.Builder b3 = new AlertDialog.Builder(this);
+                    b3.setTitle("Введите правило для " + activeTeacher);
+                    final EditText input = new EditText(this);
+                    b3.setView(input);
+                    b3.setPositiveButton("Сохранить", (d3, w3) -> {
+                        String rule = input.getText().toString().trim();
+                        if (rule.isEmpty()) return;
+                        List<Teacher> all = db.dao().getAllTeachers();
+                        for (Teacher t : all) {
+                            if (t.name.equals(activeTeacher)) {
+                                try {
+                                    JSONArray arr = new JSONArray(t.rules);
+                                    arr.put(rule);
+                                    t.rules = arr.toString();
+                                    db.dao().updateTeacher(t);
+                                    addMessageToChat("Добавлено правило: " + rule, false);
+                                } catch (Exception e) {}
+                            }
+                        }
+                    });
+                    b3.setNegativeButton("Отмена", (d3, w3) -> d3.cancel());
+                    b3.show();
+                });
+
+                builder.setNegativeButton("Закрыть", (d, w) -> d.dismiss());
                 builder.show();
             }
 
@@ -622,13 +728,6 @@ jobs:
                     }
                 }
 
-                sb.append("👨‍🏫 Учитель: ").append(teacherName.isEmpty() ? "Не выбран" : teacherName).append("\n");
-                if (!teacherRule.isEmpty()) {
-                    sb.append("📌 Правила: ").append(teacherRule.trim()).append("\n\n");
-                }
-
-                sb.append("❓ Вопрос: ").append(question).append("\n\n");
-                
                 String cleanTask = question.replace(" ", "").replace("=0", "").replace("X", "x");
                 Pattern pattern = Pattern.compile("([-+]?\\d*)x\\^2([-+]?\\d*)x([-+]?\\d+)");
                 Matcher matcher = pattern.matcher(cleanTask);
@@ -670,11 +769,11 @@ jobs:
                         sb.append("Не удалось распознать уравнение. Пишите в формате: x^2 - 5x + 6 = 0");
                     }
                 } else {
-                    sb.append("🔍 Это не уравнение. Ищу ответ в правилах учителя...\n\n");
+                    sb.append("🔍 Это не уравнение. Ищу ответ в правилах...\n\n");
                     
                     if (teacherRule.isEmpty()) {
                         sb.append("❌ У этого учителя пока нет правил.\n");
-                        sb.append("Добавьте правило (например, 'Сочинение должно быть 250 слов'), и я запомню его!");
+                        sb.append("Добавьте правило через кнопку 'Учителя' сверху!");
                     } else {
                         String[] words = question.toLowerCase().split(" ");
                         boolean found = false;
@@ -693,7 +792,7 @@ jobs:
                             sb.append("👉 ").append(matchedRule.trim()).append("\n\n");
                             
                             if (question.toLowerCase().contains("онегин") || question.toLowerCase().contains("пушкин")) {
-                                sb.append("💡 Совет: В учебнике литературы найдите главу про Евгения Онегина. Обратите внимание на письмо Татьяны.");
+                                sb.append("💡 Совет: В учебнике литературы найдите главу про Евгения Онегина.");
                             } else if (question.toLowerCase().contains("война") || question.toLowerCase().contains("1812")) {
                                 sb.append("💡 Совет: В учебнике истории найдите раздел про Отечественную войну 1812 года.");
                             } else {
@@ -709,17 +808,9 @@ jobs:
                 return sb.toString();
             }
 
-            private void showResult(String result) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("Ответ помощника");
-                builder.setMessage(result);
-                builder.setPositiveButton("ОК", (d, w) -> d.dismiss());
-                builder.show();
-            }
-
             private void restoreBrightness() {
                 WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.screenBrightness = defaultBrightness;
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
                 getWindow().setAttributes(lp);
             }
 
@@ -734,58 +825,6 @@ jobs:
                 String code = getSharedPreferences("activation", MODE_PRIVATE)
                         .getString("code", null);
                 return code != null && isValidCode(code);
-            }
-
-            private void renderTeachers() {
-                teachersContainer.removeAllViews();
-                List<Teacher> list = db.dao().getAllTeachers();
-                for (Teacher t : list) {
-                    View row = getLayoutInflater().inflate(R.layout.item_teacher, teachersContainer, false);
-                    TextView tvName = row.findViewById(R.id.tvName);
-                    TextView tvRules = row.findViewById(R.id.tvRules);
-                    Button btnAddRule = row.findViewById(R.id.btnAddRule);
-                    tvName.setText("Протокол: " + t.name);
-                    tvRules.setText(rulesToText(t.rules));
-                    btnAddRule.setOnClickListener(v -> showAddRuleDialog(t));
-                    teachersContainer.addView(row);
-                }
-            }
-
-            private String rulesToText(String rulesJson) {
-                try {
-                    JSONArray arr = new JSONArray(rulesJson);
-                    if (arr.length() == 0) return "Правил пока нет";
-                    StringBuilder sb = new StringBuilder("Правила:\n");
-                    for (int i = 0; i < arr.length(); i++) {
-                        sb.append("* ").append(arr.getString(i)).append("\n");
-                    }
-                    return sb.toString();
-                } catch (Exception e) {
-                    return "Правил пока нет";
-                }
-            }
-
-            private void showAddRuleDialog(Teacher t) {
-                AlertDialog.Builder b = new AlertDialog.Builder(this);
-                b.setTitle("Правило для " + t.name);
-                final EditText input = new EditText(this);
-                input.setHint("Введите правило");
-                b.setView(input);
-                b.setPositiveButton("Добавить", (d, w) -> {
-                    String rule = input.getText().toString().trim();
-                    if (rule.isEmpty()) return;
-                    try {
-                        JSONArray arr = new JSONArray(t.rules);
-                        arr.put(rule);
-                        t.rules = arr.toString();
-                        db.dao().updateTeacher(t);
-                        renderTeachers();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-                b.setNegativeButton("Отмена", (d, w) -> d.cancel());
-                b.show();
             }
 
             private void showBooksList() {
